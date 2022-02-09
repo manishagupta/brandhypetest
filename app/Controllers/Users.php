@@ -44,12 +44,25 @@ class Users extends ResourceController
 
     }
 	
-	public function showdata(){
+	//get information of a user
+	
+	public function getAccessToken(){
+		$model = new UserModel();
+		$user_id=$this->request->getVar('user_id');
+		$data = $model->getWhere(['id' => $user_id])->getResult();		
+        if($data){
+            return $this->respond($data);
+        }else{
+            return $this->failNotFound('No Data Found with id '.$id);
+        }
+		
+	}
+	public function showBalance(){
 		$headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
 		$throttler = \Config\Services::throttler();
 
 		$allowed = $throttler->check($headers, 4, 60);
-		print_r($allowed);
+		print_r($headers);
 		if ($allowed) { // if form_submitted <= 4 
 			$model = new UserModel();
 			$data = $model->findAll();
