@@ -49,8 +49,5 @@ $routes->get('/', 'Home::index');
 if (file_exists(APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php')) {
     require APPPATH . 'Config/' . ENVIRONMENT . '/Routes.php';
 }
-
-$routes->get("login", "LoginController::index");
-$routes->post("validate-user", "LoginController::validateUser");
 $routes->get('/', 'home :: index');
-$routes->resource('product');
+$routes->resource('user');
