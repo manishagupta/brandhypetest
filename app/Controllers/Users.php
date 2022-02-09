@@ -8,70 +8,70 @@ use \Firebase\JWT\JWT;
 class Users extends ResourceController
 {
     use ResponseTrait;
-    // get all Users
+    
+	// Code to generate JWT access token
     public function index()
     {
-		$throttler = \Config\Services::throttler();
-		
-		// Checking login attempt 4 times in a minute
-        $allowed = $throttler->check('login', 4, MINUTE);
-		
-		if ($allowed) { // if form_submitted <= 4 
-			$model = new UserModel();
-			$data = $model->findAll();
-			$key = getenv('JWT_SECRET');
-			//var_dump( $key);
-			$iat = time(); // current timestamp value
-			$exp = $iat + 3600;
-	 
-			$payload = array(
-				"iss" => "Issuer of the JWT",
-				"aud" => "Audience that the JWT",
-				"sub" => "Subject of the JWT",
-				"iat" => $iat, //Time the JWT issued at
-				"exp" => $exp, // Expiration time of token
-				"email" => 'manisha7971@gmail.com',
-			);
-			/* 
-			$token = JWT::encode($payload, $key);
-			*/
-			return $this->respond($data);
-        } else {
-			
-            //return requested too many timeserror 
-            return $this->failNotFound("error", "You requested too many times");
-        }
-
+		$model = new UserModel();
+		$data = $model->findAll();
+		$key = getenv('JWT_SECRET');// JWT secret key from env file
+		$iat = time(); // current timestamp value
+		$exp = $iat + 3600;
+ 
+		$payload = array(
+			"iss" => "Issuer of the JWT",
+			"aud" => "Audience that the JWT",
+			"sub" => "Subject of the JWT",
+			"iat" => $iat, //Time the JWT issued at
+			"exp" => $exp, // Expiration time of token
+			"email" => 'manisha7971@gmail.com',
+		);
+		$token = JWT::encode($payload, $key); // token generation
     }
 	
-	//get information of a user
-	
-	public function getAccessToken(){
+	/*	
+	Function : getUserInfo
+	Purpose : get information of a user
+	Params : user_id
+	URL: http://localhost:8080/users/getUserInfo?user_id=user_id
+	*/
+	public function getUserInfo(){
 		$model = new UserModel();
 		$user_id=$this->request->getVar('user_id');
-		$data = $model->getWhere(['id' => $user_id])->getResult();		
-        if($data){
+		$data = $model->getWhere(['id' => $user_id])->getResult(); //get user data	
+        if($data){ //check if data found
             return $this->respond($data);
         }else{
-            return $this->failNotFound('No Data Found with id '.$id);
-        }
-		
+            return $this->failNotFound('No Data Found with this user id.');
+        }		
 	}
+	
+	/*	
+	Function : showBalance
+	Purpose : find out user current balance 
+	Authorization : bearer token
+	URL: http://localhost:8080/users/showBalance
+	*/
 	public function showBalance(){
 		$headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
-		$throttler = \Config\Services::throttler();
-
-		$allowed = $throttler->check($headers, 4, 60);
-		print_r($headers);
-		if ($allowed) { // if form_submitted <= 4 
-			$model = new UserModel();
-			$data = $model->findAll();
-			return $this->respond($data);
-        } else {
+		$throttler = \Config\Services::throttler(); //intialize throttler 
+		if (!empty($headers)) { // check if header is present
+			if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+				$access_token= $matches[1];
+			}
+			$allowed = $throttler->check($access_token, 50, 3600); // checking 50 request in an hour
 			
-            //return requested too many timeserror 
-            return $this->failNotFound("error", "You requested too many times");
-        }
+			if ($allowed) { // if request <= 50
+				$model = new UserModel();
+				$data = $model->select(['total_balance'])->getWhere(['access_token' => $access_token])->getResult();
+				return $this->respond($data);
+			} else {				
+				//return requested too many timeserror 
+				return $this->failNotFound("error", "You requested too many times.");
+			}
+		} else {
+			return $this->failNotFound('Missing information.');
+		}
 	}
  
 }
